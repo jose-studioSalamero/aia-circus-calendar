@@ -26,67 +26,107 @@ document.addEventListener('DOMContentLoaded', function() {
   }
 
   function initializeCalendar() {
+    var calendarLocale = 'en';
+    var calendarInstance = null;
+
+    function normalizeLocale(locale) {
+      if (!locale) return 'en';
+      const normalized = String(locale).trim().toLowerCase();
+      if (normalized === 'zh-hk' || normalized === 'zh-hant' || normalized === 'zh-hant-hk' || normalized === 'zh-tw') return 'zh-tw';
+      if (normalized === 'zh-cn' || normalized === 'zh-hans' || normalized === 'zh-hans-hk' || normalized === 'zh-sg') return 'zh-cn';
+      if (normalized === 'zh') return 'zh-cn';
+      return 'en';
+    }
+
+    function applyLocale(locale) {
+      calendarLocale = normalizeLocale(locale);
+      console.log('Applying calendar locale:', calendarLocale);
+
+      if (calendarInstance) {
+        calendarInstance.setOption('locale', calendarLocale);
+      }
+
+      document.documentElement.lang = calendarLocale === 'en' ? 'en' : (calendarLocale === 'zh-tw' ? 'zh-Hant' : 'zh-Hans');
+
+      setTimeout(function() {
+        document.querySelectorAll('.fc-button').forEach(function(button) {
+          const label = button.getAttribute('aria-label') || button.textContent.trim();
+          const isMonth = label.toLowerCase().includes('month');
+          const isWeek = label.toLowerCase().includes('week');
+          const isDay = label.toLowerCase().includes('day');
+
+          if (calendarLocale === 'zh-tw') {
+            if (isMonth) button.textContent = '月';
+            if (isWeek) button.textContent = '週';
+            if (isDay) button.textContent = '日';
+          } else if (calendarLocale === 'zh-cn') {
+            if (isMonth) button.textContent = '月';
+            if (isWeek) button.textContent = '周';
+            if (isDay) button.textContent = '日';
+          }
+        });
+      }, 100);
+    }
+
     // Enhanced locale detection
     function detectLocale() {
       const currentPath = window.location.pathname;
-      let calendarLocale = 'en'; // default
+      let detectedLocale = 'en';
 
       console.log('Current path:', currentPath);
 
       if (currentPath.includes('/zh-hant-hk/') || currentPath.includes('/hk/')) {
-        calendarLocale = 'zh-hk'; // Try Hong Kong specific locale first
-      } else if (currentPath.includes('/zh-hans-hk/')) {
-        calendarLocale = 'zh-cn';
+        detectedLocale = 'zh-tw';
+      } else if (currentPath.includes('/zh-hans-hk/') || currentPath.includes('/zh-cn/')) {
+        detectedLocale = 'zh-cn';
       } else if (currentPath.includes('/zh/')) {
-        calendarLocale = 'zh';
+        detectedLocale = 'zh-cn';
       }
 
-      // Fallback if specific locale isn't available
-      const availableLocales = ['en', 'zh-cn', 'zh-tw', 'zh-hk', 'zh'];
-      if (!availableLocales.includes(calendarLocale)) {
-        calendarLocale = 'en';
-      }
-
-      console.log('Detected calendar locale:', calendarLocale);
-      return calendarLocale;
+      return normalizeLocale(detectedLocale);
     }
 
     // Function to translate view selector buttons
     function translateViewButtons() {
       const currentPath = window.location.pathname;
-      let translations = {};
+      let locale = detectLocale();
 
-      if (currentPath.includes('/zh-hant-hk/') || currentPath.includes('/hk/')) {
-        // Traditional Chinese (Hong Kong)
-        translations = {
-          'dayGridMonth': '月',
-          'timeGridWeek': '週', 
-          'timeGridDay': '日'
-        };
-      } else if (currentPath.includes('/zh-hans-hk/') || currentPath.includes('/zh-cn/')) {
-        // Simplified Chinese
-        translations = {
-          'dayGridMonth': '月',
-          'timeGridWeek': '週',
-          'timeGridDay': '日'
-        };
-      }
-
-      // Apply translations if needed
-      if (Object.keys(translations).length > 0) {
+      if (currentPath.includes('/zh-hant-hk/') || currentPath.includes('/hk/') || locale === 'zh-tw') {
         setTimeout(function() {
           document.querySelectorAll('.fc-button').forEach(function(button) {
-            const buttonText = button.textContent.trim();
-            if (buttonText === 'month' && translations['dayGridMonth']) {
-              button.textContent = translations['dayGridMonth'];
-            } else if (buttonText === 'week' && translations['timeGridWeek']) {
-              button.textContent = translations['timeGridWeek'];
-            } else if (buttonText === 'day' && translations['timeGridDay']) {
-              button.textContent = translations['timeGridDay'];
-            }
+            const label = (button.getAttribute('aria-label') || button.textContent || '').toLowerCase();
+            if (label.includes('month')) button.textContent = '月';
+            if (label.includes('week')) button.textContent = '週';
+            if (label.includes('day')) button.textContent = '日';
+          });
+        }, 100);
+      } else if (currentPath.includes('/zh-hans-hk/') || currentPath.includes('/zh-cn/') || locale === 'zh-cn') {
+        setTimeout(function() {
+          document.querySelectorAll('.fc-button').forEach(function(button) {
+            const label = (button.getAttribute('aria-label') || button.textContent || '').toLowerCase();
+            if (label.includes('month')) button.textContent = '月';
+            if (label.includes('week')) button.textContent = '周';
+            if (label.includes('day')) button.textContent = '日';
           });
         }, 100);
       }
+    }
+
+    window.addEventListener('message', function(event) {
+      if (!event.data || !event.data.type) return;
+      if (event.data.type === 'calendar:set-locale') {
+        applyLocale(event.data.locale);
+      }
+      if (event.data.type === 'calendar:request-locale') {
+        event.source && event.source.postMessage({
+          type: 'calendar:set-locale',
+          locale: calendarLocale
+        }, '*');
+      }
+    });
+
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage({ type: 'calendar:request-locale' }, '*');
     }
 
     var calendarEl = document.getElementById('divCalendar');
@@ -683,8 +723,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize FullCalendar with enhanced configuration
     try {
+      calendarLocale = detectLocale();
       var calendar = new FullCalendar.Calendar(calendarEl, {
-        locale: detectLocale(),
+        locale: calendarLocale,
         timezone: 'Asia/Hong_Kong',
         dayNumberFormat: { day: 'numeric' },
         dayHeaderFormat: { weekday: 'short' },
@@ -725,10 +766,10 @@ document.addEventListener('DOMContentLoaded', function() {
           right: 'dayGridMonth,timeGridWeek,timeGridDay'
         },
         validRange: {
-          start: '2026-02-01',
-          end: '2026-03-02' //2026-03-02 or 2026-01-12
+          start: '2026-12-01',
+          end: '2027-02-28'
         },
-        initialDate: '2025-12-22',
+        initialDate: '2026-12-01',
         events: myEvents,
         selectable: true,
         fixedWeekCount: false,
@@ -813,13 +854,15 @@ document.addEventListener('DOMContentLoaded', function() {
       });
 
       // Start initialization
+      calendarInstance = calendar;
       loadEventbriteScript();
       calendar.render();
+      applyLocale(calendarLocale);
       translateViewButtons();
       applyAllDateClassesAllViews();
       removeDayCharacter();
 
-      console.log('Calendar initialized successfully with locale:', detectLocale());
+      console.log('Calendar initialized successfully with locale:', calendarLocale);
       console.log('Total events loaded:', myEvents.length);
 
     } catch (error) {
