@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no">
+  <title>AIA Circus Calendar</title>
+
+  <!-- Load jQuery first -->
+  <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+
+  <!-- Load FullCalendar v6 -->
+  <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.19/index.global.min.js"></script>
+
+  <!-- FullCalendar locales -->
+  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.19/locales/zh-tw.global.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@fullcalendar/core@6.1.19/locales/zh-cn.global.min.js"></script>
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Calendar mount point -->
+  <div id="divCalendar"></div>
+
+  <!--
+    This hidden collection list is a holdover from the Webflow CMS integration.
+    It's harmless to leave here (the JS defensively checks for it and finds nothing),
+    but you can delete it entirely since there's no Webflow CMS feeding it anymore.
+    Left as an empty wrapper purely for backward compatibility with the jQuery selector.
+  -->
+  <div class="ec-col-list-wrap" style="display:none;"></div>
+
+  <script src="script.js"></script>
+</body>
+</html>
